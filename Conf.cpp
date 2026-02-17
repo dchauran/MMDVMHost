@@ -235,6 +235,8 @@ m_dmrNetworkJitter(360U),
 m_dmrNetworkSlot1(true),
 m_dmrNetworkSlot2(true),
 m_dmrNetworkModeHang(3U),
+m_dmrNetworkPingInterval(5U),
+m_dmrNetworkPingRetry(1U),
 m_fusionNetworkEnabled(false),
 m_fusionNetworkLocalAddress(),
 m_fusionNetworkLocalPort(0U),
@@ -893,6 +895,10 @@ bool CConf::read()
 				m_dmrNetworkSlot2 = ::atoi(value) == 1;
 			else if (::strcmp(key, "ModeHang") == 0)
 				m_dmrNetworkModeHang = (unsigned int)::atoi(value);
+			else if (::strcmp(key, "PingInterval") == 0)
+				m_dmrNetworkPingInterval = (unsigned int)::atoi(value);
+			else if (::strcmp(key, "PingRetry") == 0)
+				m_dmrNetworkPingRetry = (unsigned int)::atoi(value);
 		} else if (section == SECTION::FUSION_NETWORK) {
 			if (::strcmp(key, "Enable") == 0)
 				m_fusionNetworkEnabled = ::atoi(value) == 1;
@@ -1924,6 +1930,16 @@ std::string CConf::getDMRNetworkOptions() const
 unsigned int CConf::getDMRNetworkModeHang() const
 {
 	return m_dmrNetworkModeHang;
+}
+
+unsigned int CConf::getDMRNetworkPingInterval() const
+{
+	return m_dmrNetworkPingInterval;
+}
+
+unsigned int CConf::getDMRNetworkPingRetry() const
+{
+	return m_dmrNetworkPingRetry;
 }
 
 bool CConf::getDMRNetworkDebug() const

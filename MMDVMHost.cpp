@@ -1507,6 +1507,8 @@ bool CMMDVMHost::createDMRNetwork()
 	unsigned int jitter  = m_conf.getDMRNetworkJitter();
 	bool slot1           = m_conf.getDMRNetworkSlot1();
 	bool slot2           = m_conf.getDMRNetworkSlot2();
+	unsigned int pingInterval = m_conf.getDMRNetworkPingInterval();
+	unsigned int pingRetry    = m_conf.getDMRNetworkPingRetry();
 	HW_TYPE hwType       = m_modem->getHWType();
 	m_dmrNetModeHang     = m_conf.getDMRNetworkModeHang();
 	std::string options  = m_conf.getDMRNetworkOptions();
@@ -1522,12 +1524,14 @@ bool CMMDVMHost::createDMRNetwork()
 	LogInfo("    Jitter: %ums", jitter);
 	LogInfo("    Slot 1: %s", slot1 ? "enabled" : "disabled");
 	LogInfo("    Slot 2: %s", slot2 ? "enabled" : "disabled");
+	LogInfo("    Ping Interval: %us", pingInterval);
+	LogInfo("    Ping Retry: %us (Direct only)", pingRetry);
 	LogInfo("    Mode Hang: %us", m_dmrNetModeHang);
 
 	if (type == "Direct")
-		m_dmrNetwork = new CDMRDirectNetwork(remoteAddress, remotePort, localAddress, localPort, id, password, m_duplex, VERSION, slot1, slot2, hwType, debug);
+		m_dmrNetwork = new CDMRDirectNetwork(remoteAddress, remotePort, localAddress, localPort, id, password, pingInterval, pingRetry, m_duplex, VERSION, slot1, slot2, hwType, debug);
 	else
-		m_dmrNetwork = new CDMRGatewayNetwork(remoteAddress, remotePort, localAddress, localPort, id, m_duplex, VERSION, slot1, slot2, hwType, debug);
+		m_dmrNetwork = new CDMRGatewayNetwork(remoteAddress, remotePort, localAddress, localPort, id, pingInterval, m_duplex, VERSION, slot1, slot2, hwType, debug);
 
 	unsigned int rxFrequency = m_conf.getRXFrequency();
 	unsigned int txFrequency = m_conf.getTXFrequency();

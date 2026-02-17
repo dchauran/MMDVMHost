@@ -31,7 +31,7 @@ const unsigned int BUFFER_LENGTH = 500U;
 const unsigned int HOMEBREW_DATA_PACKET_LENGTH = 55U;
 
 
-CDMRGatewayNetwork::CDMRGatewayNetwork(const std::string& address, unsigned short port, const std::string& localAddress, unsigned short localPort, unsigned int id, bool duplex, const char* version, bool slot1, bool slot2, HW_TYPE hwType, bool debug) :
+CDMRGatewayNetwork::CDMRGatewayNetwork(const std::string& address, unsigned short port, const std::string& localAddress, unsigned short localPort, unsigned int id, unsigned int pingInterval, bool duplex, const char* version, bool slot1, bool slot2, HW_TYPE hwType, bool debug) :
 m_addressStr(address),
 m_addr(),
 m_addrLen(0U),
@@ -55,11 +55,14 @@ m_rxFrequency(0U),
 m_txFrequency(0U),
 m_power(0U),
 m_colorCode(0U),
-m_pingTimer(1000U, 10U)
+m_pingTimer(1000U, pingInterval > 0U ? pingInterval : 1U)
 {
 	assert(!address.empty());
 	assert(port > 0U);
 	assert(id > 1000U);
+
+	if (pingInterval == 0U)
+		LogWarning("DMR, DMR Network PingInterval was 0, using 1 second");
 
 	if (CUDPSocket::lookup(m_addressStr, m_port, m_addr, m_addrLen) != 0)
 		m_addrLen = 0U;

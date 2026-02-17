@@ -32,7 +32,7 @@
 class CDMRDirectNetwork : public IDMRNetwork
 {
 public:
-	CDMRDirectNetwork(const std::string& remoteAddress, unsigned short remotePort, const std::string& localAddress, unsigned short localPort, unsigned int id, const std::string& password, bool duplex, const char* version, bool slot1, bool slot2, HW_TYPE hwType, bool debug);
+	CDMRDirectNetwork(const std::string& remoteAddress, unsigned short remotePort, const std::string& localAddress, unsigned short localPort, unsigned int id, const std::string& password, unsigned int pingInterval, unsigned int pingRetry, bool duplex, const char* version, bool slot1, bool slot2, HW_TYPE hwType, bool debug);
 	virtual ~CDMRDirectNetwork();
 
 	virtual void setOptions(const std::string& options);
@@ -87,9 +87,14 @@ private:
 	STATUS         m_status;
 	CTimer         m_retryTimer;
 	CTimer         m_timeoutTimer;
+	CTimer         m_pingTimer;
+	CTimer         m_pingRetryTimer;
 	unsigned char* m_buffer;
 	uint32_t*      m_streamId;
 	unsigned char* m_salt;
+	unsigned int   m_pingRetrySecs;
+	bool           m_waitingForPong;
+	unsigned int   m_pingRetryCount;
 
 	CRingBuffer<unsigned char> m_rxData;
 

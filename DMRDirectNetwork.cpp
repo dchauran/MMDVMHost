@@ -30,7 +30,7 @@ const unsigned int BUFFER_LENGTH = 500U;
 const unsigned int HOMEBREW_DATA_PACKET_LENGTH = 55U;
 
 
-CDMRDirectNetwork::CDMRDirectNetwork(const std::string& address, unsigned short port, const std::string& localAddress, unsigned short localPort, unsigned int id, const std::string& password, bool duplex, const char* version, bool slot1, bool slot2, HW_TYPE hwType, bool debug) :
+CDMRDirectNetwork::CDMRDirectNetwork(const std::string& address, unsigned short port, const std::string& localAddress, unsigned short localPort, unsigned int id, const std::string& password, unsigned int pingInterval, unsigned int pingRetry, bool duplex, const char* version, bool slot1, bool slot2, HW_TYPE hwType, bool debug) :
 m_address(address),
 m_port(port),
 m_addr(),
@@ -48,9 +48,14 @@ m_hwType(hwType),
 m_status(STATUS::WAITING_CONNECT),
 m_retryTimer(1000U, 10U),
 m_timeoutTimer(1000U, 60U),
+m_pingTimer(1000U, pingInterval > 0U ? pingInterval : 1U),
+m_pingRetryTimer(1000U, pingRetry > 0U ? pingRetry : 1U),
 m_buffer(nullptr),
 m_streamId(nullptr),
 m_salt(nullptr),
+m_pingRetrySecs(pingRetry > 0U ? pingRetry : 1U),
+m_waitingForPong(false),
+m_pingRetryCount(0U),
 m_rxData(1000U, "DMR Network"),
 m_options(),
 m_random(),
@@ -71,6 +76,13 @@ m_beacon(false)
 	assert(port > 0U);
 	assert(id > 1000U);
 	assert(!password.empty());
+
+	if (pingInterval == 0U)
+		LogWarning("DMR, DMR Network PingInterval was 0, using 1 second");
+	if (pingRetry == 0U)
+		LogWarning("DMR, DMR Network PingRetry was 0, using 1 second");
+	if (pingRetry >= pingInterval && pingInterval > 0U)
+		LogWarning("DMR, DMR Network PingRetry (%us) is greater than or equal to PingInterval (%us)", pingRetry, pingInterval);
 
 	if (CUDPSocket::lookup(m_address, m_port, m_addr, m_addrLen) != 0)
 		m_addrLen = 0U;
@@ -134,6 +146,10 @@ bool CDMRDirectNetwork::open()
 	m_status = STATUS::WAITING_CONNECT;
 	m_timeoutTimer.stop();
 	m_retryTimer.start();
+	m_pingTimer.stop();
+	m_pingRetryTimer.stop();
+	m_waitingForPong = false;
+	m_pingRetryCount = 0U;
 
 	return m_socket.open(m_addr);
 }
@@ -339,6 +355,10 @@ void CDMRDirectNetwork::close(bool sayGoodbye)
 
 	m_retryTimer.stop();
 	m_timeoutTimer.stop();
+	m_pingTimer.stop();
+	m_pingRetryTimer.stop();
+	m_waitingForPong = false;
+	m_pingRetryCount = 0U;
 }
 
 void CDMRDirectNetwork::clock(unsigned int ms)
@@ -362,14 +382,45 @@ void CDMRDirectNetwork::clock(unsigned int ms)
 		case STATUS::WAITING_CONFIG:
 			writeConfig();
 			break;
-		case STATUS::RUNNING:
-			writePing();
-			break;
 		default:
 			break;
 		}
 
-		m_retryTimer.start();
+		if (m_status == STATUS::RUNNING)
+			m_retryTimer.stop();
+		else
+			m_retryTimer.start();
+	}
+
+	if (m_status == STATUS::RUNNING) {
+		if (!m_pingTimer.isRunning())
+			m_pingTimer.start();
+
+		m_pingTimer.clock(ms);
+		if (m_pingTimer.hasExpired()) {
+			writePing();
+			m_waitingForPong = true;
+			m_pingRetryCount = 0U;
+			m_pingRetryTimer.start();
+			m_pingTimer.start();
+		}
+
+		if (m_waitingForPong) {
+			m_pingRetryTimer.clock(ms);
+			if (m_pingRetryTimer.hasExpired()) {
+				m_pingRetryCount++;
+				LogMessage("DMR, No MSTPONG yet, retrying RPTPING (retry #%u, every %us)", m_pingRetryCount, m_pingRetrySecs);
+				writePing();
+				m_pingRetryTimer.start();
+			}
+		} else {
+			m_pingRetryTimer.stop();
+		}
+	} else {
+		m_pingTimer.stop();
+		m_pingRetryTimer.stop();
+		m_waitingForPong = false;
+		m_pingRetryCount = 0U;
 	}
 
 	sockaddr_storage address;
@@ -403,6 +454,10 @@ void CDMRDirectNetwork::clock(unsigned int ms)
 				m_status = STATUS::WAITING_LOGIN;
 				m_timeoutTimer.start();
 				m_retryTimer.start();
+				m_pingTimer.stop();
+				m_pingRetryTimer.stop();
+				m_waitingForPong = false;
+				m_pingRetryCount = 0U;
 			} else {
 				/* Once the modem death spiral has been prevented in Modem.cpp
 				   the Network sometimes times out and reaches here.
@@ -456,6 +511,9 @@ void CDMRDirectNetwork::clock(unsigned int ms)
 			open();
 		} else if (::memcmp(m_buffer, "MSTPONG", 7U) == 0) {
 			m_timeoutTimer.start();
+			m_waitingForPong = false;
+			m_pingRetryCount = 0U;
+			m_pingRetryTimer.stop();
 		} else if (::memcmp(m_buffer, "RPTSBKN", 7U) == 0) {
 			m_beacon = true;
 		} else {

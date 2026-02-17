@@ -236,6 +236,8 @@ public:
   bool         getDMRNetworkSlot1() const;
   bool         getDMRNetworkSlot2() const;
   unsigned int getDMRNetworkModeHang() const;
+  unsigned int getDMRNetworkPingInterval() const;
+  unsigned int getDMRNetworkPingRetry() const;
 
   // The System Fusion Network section
   bool         getFusionNetworkEnabled() const;
@@ -534,6 +536,8 @@ private:
   bool         m_dmrNetworkSlot1;
   bool         m_dmrNetworkSlot2;
   unsigned int m_dmrNetworkModeHang;
+  unsigned int m_dmrNetworkPingInterval;
+  unsigned int m_dmrNetworkPingRetry;
 
   bool         m_fusionNetworkEnabled;
   std::string  m_fusionNetworkLocalAddress;
