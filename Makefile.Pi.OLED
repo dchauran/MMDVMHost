@@ -10,7 +10,8 @@ LIBS    = -lArduiPi_OLED -lpthread -lutil
 # If you use NetBSD, add following CFLAGS
 #CFLAGS += -L/usr/local/lib -Wl,-rpath=/usr/local/lib
 
-LDFLAGS = -g -L/usr/local/lib
+#LDFLAGS = -g -L/usr/local/lib
+LDFLAGS = -L/usr/local/lib
 
 OBJECTS = \
 		AMBEFEC.o BCH.o BPTC19696.o CASTInfo.o Conf.o CRC.o Display.o DMRControl.o DMRCSBK.o DMRData.o DMRDataHeader.o \
